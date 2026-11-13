@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPL Marks</title>
+<style>
+  :root {
+    --ink: #1a1a1a; --muted: #666; --line: #333; --bg: #f4f4f1; --paper: #fff;
+    --accent: #1f4e79; --warn: #b00020;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Times New Roman", Georgia, serif; color: var(--ink); background: var(--bg); }
+  .toolbar {
+    position: sticky; top: 0; z-index: 5; background: var(--accent); color: #fff;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 16px;
+    font-family: system-ui, sans-serif; font-size: 14px;
+  }
+  .toolbar h1 { font-size: 16px; margin: 0 12px 0 0; }
+  .toolbar select, .toolbar button, .toolbar input {
+    font: inherit; padding: 5px 9px; border-radius: 4px; border: 1px solid #ffffff55;
+  }
+  .toolbar button { background: #fff; color: var(--accent); cursor: pointer; border: 0; }
+  .toolbar button.danger { color: var(--warn); }
+  .toolbar .spacer { flex: 1; }
+  main { padding: 16px; }
+  .sheet {
+    background: var(--paper); max-width: 900px; margin: 0 auto; padding: 28px 32px;
+    box-shadow: 0 1px 6px #0002;
+  }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .head .kind { border: 1.5px solid var(--line); padding: 8px 14px; font-style: italic; font-weight: bold; font-size: 18px; }
+  .head .kind select { font: inherit; border: 0; background: transparent; font-style: italic; font-weight: bold; }
+  .head .report { font-family: Arial, sans-serif; font-weight: bold; font-size: 36px; color: #444; letter-spacing: 1px; }
+  .info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 18px; margin: 16px 0 12px; }
+  .info label { display: flex; gap: 6px; align-items: baseline; font-weight: bold; font-size: 14px; }
+  .info input { flex: 1; min-width: 0; }
+  input.line, textarea.line {
+    font: inherit; border: 0; border-bottom: 1px dotted #888; background: transparent; padding: 2px 4px; color: #0b3d91;
+  }
+  textarea.line { width: 100%; resize: vertical; font-family: inherit; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th, td { border: 1px solid var(--line); padding: 3px 5px; vertical-align: middle; }
+  th { font-weight: normal; font-size: 13px; }
+  th.subject { text-decoration: underline; font-weight: bold; text-align: center; width: 30%; }
+  th.grade { width: 34px; font-size: 12px; line-height: 1.15; }
+  th.num { width: 70px; }
+  th.num input { width: 40px; text-align: center; font: inherit; border: 0; border-bottom: 1px dotted #888; }
+  td.sub { font-size: 13px; text-transform: uppercase; }
+  td.sub small { display: block; font-style: italic; font-size: 11px; }
+  td.sub .del { float: right; border: 0; background: none; color: #bbb; cursor: pointer; font-size: 14px; }
+  td.sub .del:hover { color: var(--warn); }
+  td input.mark { width: 100%; text-align: center; border: 0; font: inherit; font-size: 15px; color: #0b3d91; background: transparent; }
+  td input.mark.bad { background: #fde3e3; }
+  td.g { text-align: center; font-weight: bold; color: #0b3d91; }
+  td input.rem { width: 100%; border: 0; font: inherit; font-size: 13px; color: #0b3d91; background: transparent; }
+  tfoot td { font-size: 13px; }
+  .add-row { margin: 6px 0 0; font-family: system-ui, sans-serif; font-size: 13px; }
+  .add-row input { padding: 4px 6px; }
+  .bottom { border: 1px solid var(--line); border-top: 0; padding: 8px 10px; }
+  .bottom .row { display: flex; gap: 8px; align-items: baseline; margin: 6px 0; flex-wrap: wrap; }
+  .bottom b { font-size: 14px; white-space: nowrap; }
+  .bottom .row input { flex: 1; min-width: 120px; }
+  .bottom .remark { border-top: 1px solid var(--line); margin: 8px -10px 0; padding: 8px 10px 0; }
+  .summary { font-family: system-ui, sans-serif; font-size: 13px; margin: 8px 0; display: flex; gap: 18px; flex-wrap: wrap; }
+  .summary span b { color: var(--accent); }
+  dialog { max-width: 420px; width: 92vw; font-family: system-ui, sans-serif; border: 0; border-radius: 8px; box-shadow: 0 6px 30px #0004; }
+  dialog table { min-width: 0; }
+  dialog td input { width: 70px; }
+  dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .hint { font-family: system-ui, sans-serif; font-size: 12px; color: var(--muted); max-width: 900px; margin: 10px auto; }
+
+  @media (max-width: 600px) {
+    .sheet { padding: 16px; }
+    .head .report { font-size: 26px; }
+  }
+  @media print {
+    @page { size: A4; margin: 10mm; }
+    body { background: #fff; }
+    .toolbar, .add-row, .hint, td.sub .del, .summary.screen-only { display: none !important; }
+    main { padding: 0; }
+    .sheet { box-shadow: none; max-width: none; padding: 0; }
+    input.line, textarea.line, th.num input { border-bottom-color: transparent; }
+    td input.mark.bad { background: none; }
+    textarea.line { resize: none; overflow: hidden; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <h1>CPL Marks</h1>
+  <label>Student <select id="studentSel"></select></label>
+  <button id="newBtn">+ New student</button>
+  <button id="dupBtn" title="New student with the same class, term and subjects">Copy for next student</button>
+  <button id="delBtn" class="danger">Delete</button>
+  <span class="spacer"></span>
+  <button id="gradeBtn">Grading scale</button>
+  <button id="exportBtn">Export</button>
+  <button id="importBtn">Import</button>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+  <button id="printBtn">Print</button>
+</div>
+
+<main>
+  <div class="sheet" id="sheet">
+    <div class="head">
+      <div class="kind">
+        <select id="kind">
+          <option>ASSESSMENT</option><option>TERMINAL</option><option>END OF YEAR</option>
+          <option>ASSESSMENT/TERMINAL/END OF YEAR</option>
+        </select>
+      </div>
+      <div class="report">REPORT</div>
+    </div>
+
+    <div class="info">
+      <label>Name: <input class="line" data-f="name"></label>
+      <label>Class: <input class="line" data-f="cls"></label>
+      <label>Term: <input class="line" data-f="term"></label>
+      <label>Year: <input class="line" data-f="year"></label>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="subject" rowspan="2">SUBJECT</th>
+          <th class="num">Last<br>Assess</th>
+          <th class="num">Cum.<br>Marks</th>
+          <th class="grade" rowspan="2">G<br>R<br>A<br>D<br>E</th>
+          <th rowspan="2" style="font-weight:bold">TEACHER'S REMARKS</th>
+        </tr>
+        <tr>
+          <th class="num">Ex <input id="outLast" type="number" min="1" title="Marks out of"></th>
+          <th class="num">Ex <input id="outCum" type="number" min="1" title="Marks out of"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+      <tfoot>
+        <tr>
+          <td><b>TOTAL</b></td><td class="g" id="totLast"></td><td class="g" id="totCum"></td><td></td>
+          <td id="avgCell"></td>
+        </tr>
+      </tfoot>
+    </table>
+    </div>
+
+    <div class="bottom">
+      <div class="row">
+        <b>ABSENCES:</b> <input class="line" data-f="absences">
+        <b>LATENESS:</b> <input class="line" data-f="lateness">
+      </div>
+      <div class="row"><b>EXTRA-CURRICULAR ACTIVITIES:</b> <input class="line" data-f="extra"></div>
+      <div class="row"><b>GENERAL CONDUCT:</b> <input class="line" data-f="conduct"></div>
+      <div class="remark"><b>FORM MASTER'S REMARKS</b><textarea class="line" rows="2" data-f="formMaster"></textarea></div>
+      <div class="remark"><b>DEAN'S REMARKS</b><textarea class="line" rows="2" data-f="dean"></textarea></div>
+    </div>
+  </div>
+  <div class="add-row" style="max-width:900px;margin:8px auto">
+    Add subject: <input id="newSub" placeholder="e.g. GEOGRAPHY"> <button id="addSubBtn">Add</button>
+  </div>
+  <p class="hint">Data is saved automatically in this browser. Use Export to back it up or move it to another device. Marks are graded on the Cum. Marks column (or Last Assess if Cum. is empty), as a percentage of the "Ex" total.</p>
+</main>
+
+<dialog id="gradeDlg">
+  <h3 style="margin-top:0">Grading scale</h3>
+  <p style="font-size:13px;color:#555">Minimum percentage for each grade (highest first).</p>
+  <table><tbody id="gradeRows"></tbody></table>
+  <div class="actions">
+    <button id="gradeAdd">+ Row</button>
+    <span style="flex:1"></span>
+    <button id="gradeCancel">Cancel</button>
+    <button id="gradeSave">Save</button>
+  </div>
+</dialog>
+
+<script>
+const DEFAULT_SUBJECTS = [
+  ["ENGLISH LANGUAGE/G.P", ""], ["FRENCH LANGUAGE", "(MAIN/SUB)"], ["MATHEMATICS", "(MAIN/SUB)"],
+  ["ADDITIONAL MATHS", ""], ["CHEMISTRY", "OR INTEGRAT. SCIENCE"], ["PHYSICS", ""], ["BIOLOGY", ""],
+  ["COMPUTER STUDIES", "(OR INFOTECH)"], ["ENGLISH LITERATURE", "(OR SUB ENGLISH)"], ["FRENCH LITERATURE", ""],
+  ["ACCOUNTS", ""], ["BIBLE STUDIES", ""], ["ENTREPRENEURSHIP", ""], ["SOCIAL STUDIES", ""],
+  ["ART", "(MAIN/SUB)"], ["DESIGN / TECH", ""], ["MUSIC", "(MAIN/SUB)"], ["PHYSICAL EDUCATION", ""],
+];
+const DEFAULT_SCALE = [["A", 80], ["B", 70], ["C", 60], ["D", 50], ["E", 40], ["F", 0]];
+const KEY = "cplmarks.v1";
+
+function blankStudent(base) {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    kind: base?.kind ?? "TERMINAL", name: "", cls: base?.cls ?? "", term: base?.term ?? "", year: base?.year ?? "",
+    outLast: base?.outLast ?? 20, outCum: base?.outCum ?? 20,
+    subjects: (base ? base.subjects.map(s => [s.name, s.note]) : DEFAULT_SUBJECTS)
+      .map(([name, note]) => ({ name, note, last: "", cum: "", remark: "" })),
+    absences: "", lateness: "", extra: "", conduct: "", formMaster: "", dean: "",
+  };
+}
+
+let db;
+try { db = JSON.parse(localStorage.getItem(KEY)); } catch { db = null; }
+if (!db || !Array.isArray(db.students) || !db.students.length) {
+  db = { scale: DEFAULT_SCALE, students: [blankStudent()], current: null };
+}
+if (!db.scale) db.scale = DEFAULT_SCALE;
+let cur = db.students.find(s => s.id === db.current) || db.students[0];
+
+const $ = id => document.getElementById(id);
+function save() {
+  db.current = cur.id;
+  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {}
+}
+function num(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
+function gradeFor(mark, out) {
+  if (mark == null || !out || mark < 0 || mark > out) return "";
+  const pct = mark / out * 100;
+  const scale = [...db.scale].sort((a, b) => b[1] - a[1]);
+  for (const [g, min] of scale) if (pct >= min) return g;
+  return scale.length ? scale[scale.length - 1][0] : "";
+}
+
+function renderSelect() {
+  $("studentSel").innerHTML = db.students.map((s, i) =>
+    `<option value="${s.id}" ${s.id === cur.id ? "selected" : ""}>${esc(s.name || "Student " + (i + 1))}${s.cls ? " – " + esc(s.cls) : ""}</option>`).join("");
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function render() {
+  $("kind").value = cur.kind;
+  $("outLast").value = cur.outLast; $("outCum").value = cur.outCum;
+  document.querySelectorAll("[data-f]").forEach(el => el.value = cur[el.dataset.f] ?? "");
+  $("rows").innerHTML = cur.subjects.map((s, i) => `
+    <tr data-i="${i}">
+      <td class="sub"><button class="del" title="Remove subject" data-del="${i}">✕</button>${esc(s.name)}${s.note ? `<small>${esc(s.note)}</small>` : ""}</td>
+      <td><input class="mark" data-k="last" inputmode="decimal" value="${esc(s.last)}"></td>
+      <td><input class="mark" data-k="cum" inputmode="decimal" value="${esc(s.cum)}"></td>
+      <td class="g"></td>
+      <td><input class="rem" data-k="remark" value="${esc(s.remark)}"></td>
+    </tr>`).join("");
+  renderSelect();
+  recalc();
+}
+
+function recalc() {
+  let tl = 0, tc = 0, nl = 0, nc = 0;
+  document.querySelectorAll("#rows tr").forEach(tr => {
+    const s = cur.subjects[tr.dataset.i];
+    const ok = (v, out) => v != null && v >= 0 && v <= out ? v : null;
+    const l = ok(num(s.last), cur.outLast), c = ok(num(s.cum), cur.outCum);
+    tr.querySelector('[data-k=last]').classList.toggle("bad", s.last !== "" && l == null);
+    tr.querySelector('[data-k=cum]').classList.toggle("bad", s.cum !== "" && c == null);
+    if (l != null) { tl += l; nl++; }
+    if (c != null) { tc += c; nc++; }
+    tr.querySelector(".g").textContent = c != null ? gradeFor(c, cur.outCum) : gradeFor(l, cur.outLast);
+  });
+  const r = n => Math.round(n * 100) / 100;
+  $("totLast").textContent = nl ? r(tl) : "";
+  $("totCum").textContent = nc ? r(tc) : "";
+  const parts = [];
+  if (nl) parts.push(`Last avg: <b>${r(tl / nl)}/${cur.outLast}</b>`);
+  if (nc) parts.push(`Cum. avg: <b>${r(tc / nc)}/${cur.outCum}</b> (${gradeFor(tc / nc, cur.outCum)})`);
+  $("avgCell").innerHTML = `<span style="font-size:13px">${parts.join(" &nbsp; ")}</span>`;
+}
+
+// --- events ---
+$("rows").addEventListener("input", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  cur.subjects[e.target.closest("tr").dataset.i][k] = e.target.value.trim() === "" ? "" : e.target.value;
+  recalc(); save();
+});
+$("rows").addEventListener("click", e => {
+  const i = e.target.dataset.del; if (i == null) return;
+  if (!confirm(`Remove ${cur.subjects[i].name} from this report?`)) return;
+  cur.subjects.splice(i, 1); render(); save();
+});
+$("rows").addEventListener("keydown", e => {
+  // Enter moves down the same column for fast entry
+  if (e.key !== "Enter" || !e.target.dataset.k) return;
+  e.preventDefault();
+  const next = e.target.closest("tr").nextElementSibling?.querySelector(`[data-k=${e.target.dataset.k}]`);
+  next?.focus(); next?.select?.();
+});
+document.querySelectorAll("[data-f]").forEach(el => el.addEventListener("input", () => {
+  cur[el.dataset.f] = el.value; if (el.dataset.f === "name" || el.dataset.f === "cls") renderSelect(); save();
+}));
+$("kind").onchange = e => { cur.kind = e.target.value; save(); };
+$("outLast").oninput = e => { cur.outLast = num(e.target.value) || 0; recalc(); save(); };
+$("outCum").oninput = e => { cur.outCum = num(e.target.value) || 0; recalc(); save(); };
+$("addSubBtn").onclick = () => {
+  const v = $("newSub").value.trim(); if (!v) return;
+  cur.subjects.push({ name: v, note: "", last: "", cum: "", remark: "" });
+  $("newSub").value = ""; render(); save();
+};
+$("newSub").onkeydown = e => { if (e.key === "Enter") $("addSubBtn").click(); };
+
+$("studentSel").onchange = e => { cur = db.students.find(s => s.id === e.target.value); render(); save(); };
+$("newBtn").onclick = () => { cur = blankStudent(); db.students.push(cur); render(); save(); document.querySelector('[data-f=name]').focus(); };
+$("dupBtn").onclick = () => { cur = blankStudent(cur); db.students.push(cur); render(); save(); document.querySelector('[data-f=name]').focus(); };
+$("delBtn").onclick = () => {
+  if (!confirm(`Delete the report for ${cur.name || "this student"}? This cannot be undone.`)) return;
+  db.students = db.students.filter(s => s !== cur);
+  if (!db.students.length) db.students.push(blankStudent());
+  cur = db.students[0]; render(); save();
+};
+$("printBtn").onclick = () => {
+  document.querySelectorAll("textarea.line").forEach(t => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; });
+  window.print();
+};
+$("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `cplmarks-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+};
+$("importBtn").onclick = () => $("importFile").click();
+$("importFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!Array.isArray(data.students)) throw new Error("No students in file");
+    if (!confirm(`Replace current data with ${data.students.length} student(s) from ${f.name}?`)) return;
+    db = { scale: data.scale || DEFAULT_SCALE, students: data.students, current: data.current };
+    cur = db.students.find(s => s.id === db.current) || db.students[0];
+    render(); save();
+  } catch (err) { alert("Could not import: " + err.message); }
+  e.target.value = "";
+};
+
+// grading scale dialog
+function gradeRow(g = "", min = "") {
+  return `<tr><td><input class="gg" value="${esc(g)}" placeholder="Grade"></td><td>≥ <input class="gm" type="number" value="${min}"> %</td></tr>`;
+}
+$("gradeBtn").onclick = () => { $("gradeRows").innerHTML = db.scale.map(([g, m]) => gradeRow(g, m)).join(""); $("gradeDlg").showModal(); };
+$("gradeAdd").onclick = () => $("gradeRows").insertAdjacentHTML("beforeend", gradeRow());
+$("gradeCancel").onclick = () => $("gradeDlg").close();
+$("gradeSave").onclick = () => {
+  db.scale = [...$("gradeRows").rows]
+    .map(r => [r.querySelector(".gg").value.trim(), num(r.querySelector(".gm").value)])
+    .filter(([g, m]) => g && m != null);
+  if (!db.scale.length) db.scale = DEFAULT_SCALE;
+  $("gradeDlg").close(); recalc(); save();
+};
+
+render(); save();
+</script>
+</body>
+</html>
